@@ -16,6 +16,7 @@
 package passwordless
 
 import (
+	"net/http"
 	"reflect"
 	"regexp"
 
@@ -121,6 +122,9 @@ func validateAndNormaliseUserInput(appInfo supertokens.NormalisedAppinfo, config
 			typeNormalisedInput.Override.APIs = config.Override.APIs
 		}
 	}
+
+	typeNormalisedInput.ErrorHandlers = normaliseErrorHandlers(config.ErrorHandlers)
+
 	return typeNormalisedInput
 }
 
@@ -190,3 +194,53 @@ func DefaultValidatePhoneNumber(value interface{}, tenantId string) *string {
 // func defaultCreateAndSendCustomTextMessage(phoneNumber string, userInputCode *string, urlWithLinkCode *string, codeLifetime uint64, preAuthSessionId string, userContext supertokens.UserContext) {
 // 	// TODO:
 // }
+
+func normaliseErrorHandlers(config *plessmodels.ErrorHandlers) plessmodels.NormalisedErrorHandlers {
+	errorHandlers := plessmodels.NormalisedErrorHandlers{
+		OnRestartFlowError: func(message string, req *http.Request, res http.ResponseWriter) error {
+			return sendRestartFlowErrorResponse(message, req, res)
+		},
+		OnIncorrectUserInputCode: func(message string, failedCodeInputAttemptCount int, maximumCodeInputAttempts int, req *http.Request, res http.ResponseWriter) error {
+			return sendIncorrectUserInputCodeResponse(message, failedCodeInputAttemptCount, maximumCodeInputAttempts, req, res)
+		},
+		OnExpiredUserInputCodeError: func(message string, failedCodeInputAttemptCount int, maximumCodeInputAttempts int, req *http.Request, res http.ResponseWriter) error {
+			return sendExpiredUserInputCodeErrorResponse(message, failedCodeInputAttemptCount, maximumCodeInputAttempts, req, res)
+		},
+	}
+
+	if config != nil {
+		if config.OnRestartFlowError != nil {
+			errorHandlers.OnRestartFlowError = config.OnRestartFlowError
+		}
+		if config.OnIncorrectUserInputCode != nil {
+			errorHandlers.OnIncorrectUserInputCode = config.OnIncorrectUserInputCode
+		}
+		if config.OnExpiredUserInputCodeError != nil {
+			errorHandlers.OnExpiredUserInputCodeError = config.OnExpiredUserInputCodeError
+		}
+	}
+
+	return errorHandlers
+}
+
+func sendRestartFlowErrorResponse(_ string, _ *http.Request, response http.ResponseWriter) error {
+	return supertokens.SendNon200Response(response, 403, map[string]interface{}{
+		"status": "RESTART_FLOW_ERROR",
+	})
+}
+
+func sendIncorrectUserInputCodeResponse(_ string, failedCodeInputAttemptCount int, maximumCodeInputAttempts int, _ *http.Request, response http.ResponseWriter) error {
+	return supertokens.SendNon200Response(response, 403, map[string]interface{}{
+		"status":                       "INCORRECT_USER_INPUT_CODE_ERROR",
+		"failedCodeInputAttemptCount":  failedCodeInputAttemptCount,
+		"maximumCodeInputAttempts":     maximumCodeInputAttempts,
+	})
+}
+
+func sendExpiredUserInputCodeErrorResponse(_ string, failedCodeInputAttemptCount int, maximumCodeInputAttempts int, _ *http.Request, response http.ResponseWriter) error {
+	return supertokens.SendNon200Response(response, 403, map[string]interface{}{
+		"status":                       "EXPIRED_USER_INPUT_CODE_ERROR",
+		"failedCodeInputAttemptCount":  failedCodeInputAttemptCount,
+		"maximumCodeInputAttempts":     maximumCodeInputAttempts,
+	})
+}

@@ -16,7 +16,7 @@
 package passwordless
 
 import (
-	"errors"
+	defaultErrors "errors"
 	"net/http"
 
 	"github.com/supertokens/supertokens-golang/ingredients/emaildelivery"
@@ -24,6 +24,7 @@ import (
 	"github.com/supertokens/supertokens-golang/recipe/emailverification"
 	"github.com/supertokens/supertokens-golang/recipe/emailverification/evmodels"
 	"github.com/supertokens/supertokens-golang/recipe/passwordless/api"
+	"github.com/supertokens/supertokens-golang/recipe/passwordless/errors"
 	"github.com/supertokens/supertokens-golang/recipe/passwordless/plessmodels"
 	"github.com/supertokens/supertokens-golang/supertokens"
 )
@@ -108,7 +109,7 @@ func GetRecipeInstanceOrThrowError() (*Recipe, error) {
 	if singletonInstance != nil {
 		return singletonInstance, nil
 	}
-	return nil, errors.New("initialisation not done. Did you forget to call the init function?")
+	return nil, defaultErrors.New("initialisation not done. Did you forget to call the init function?")
 }
 
 func GetRecipeInstance() *Recipe {
@@ -125,7 +126,7 @@ func recipeInit(config plessmodels.TypeInput) supertokens.Recipe {
 			singletonInstance = &recipe
 			return &singletonInstance.RecipeModule, nil
 		}
-		return nil, errors.New("passwordless recipe has already been initialised. Please check your code for bugs")
+		return nil, defaultErrors.New("passwordless recipe has already been initialised. Please check your code for bugs")
 	}
 }
 
@@ -229,6 +230,18 @@ func (r *Recipe) getAllCORSHeaders() []string {
 }
 
 func (r *Recipe) handleError(err error, req *http.Request, res http.ResponseWriter, userContext supertokens.UserContext) (bool, error) {
+	if defaultErrors.As(err, &errors.RestartFlowError{}) {
+		supertokens.LogDebugMessage("errorHandler: returning RESTART_FLOW_ERROR")
+		return true, r.Config.ErrorHandlers.OnRestartFlowError(err.Error(), req, res)
+	} else if defaultErrors.As(err, &errors.IncorrectUserInputCodeError{}) {
+		supertokens.LogDebugMessage("errorHandler: returning INCORRECT_USER_INPUT_CODE_ERROR")
+		errs := err.(errors.IncorrectUserInputCodeError)
+		return true, r.Config.ErrorHandlers.OnIncorrectUserInputCode(err.Error(), errs.FailedCodeInputAttemptCount, errs.MaximumCodeInputAttempts, req, res)
+	} else if defaultErrors.As(err, &errors.ExpiredUserInputCodeError{}) {
+		supertokens.LogDebugMessage("errorHandler: returning EXPIRED_USER_INPUT_CODE_ERROR")
+		errs := err.(errors.ExpiredUserInputCodeError)
+		return true, r.Config.ErrorHandlers.OnExpiredUserInputCodeError(err.Error(), errs.FailedCodeInputAttemptCount, errs.MaximumCodeInputAttempts, req, res)
+	}
 	return false, nil
 }
 
@@ -308,7 +321,7 @@ func (r *Recipe) SignInUp(email *string, phoneNumber *string, tenantId string, u
 			PreAuthSessionID string
 			CreatedNewUser   bool
 			User             plessmodels.User
-		}{}, errors.New("failed to create user. Please try again")
+		}{}, defaultErrors.New("failed to create user. Please try again")
 	}
 }
 

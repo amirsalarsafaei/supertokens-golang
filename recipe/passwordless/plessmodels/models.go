@@ -16,6 +16,8 @@
 package plessmodels
 
 import (
+	"net/http"
+
 	"github.com/supertokens/supertokens-golang/ingredients/emaildelivery"
 	"github.com/supertokens/supertokens-golang/ingredients/smsdelivery"
 	"github.com/supertokens/supertokens-golang/supertokens"
@@ -29,6 +31,12 @@ type User struct {
 	TenantIds   []string `json:"tenantIds"`
 }
 
+type ErrorHandlers struct {
+	OnRestartFlowError          func(message string, req *http.Request, res http.ResponseWriter) error
+	OnIncorrectUserInputCode    func(message string, failedCodeInputAttemptCount int, maximumCodeInputAttempts int, req *http.Request, res http.ResponseWriter) error
+	OnExpiredUserInputCodeError func(message string, failedCodeInputAttemptCount int, maximumCodeInputAttempts int, req *http.Request, res http.ResponseWriter) error
+}
+
 type TypeInput struct {
 	ContactMethodPhone        ContactMethodPhoneConfig
 	ContactMethodEmail        ContactMethodEmailConfig
@@ -38,6 +46,13 @@ type TypeInput struct {
 	Override                  *OverrideStruct
 	EmailDelivery             *emaildelivery.TypeInput
 	SmsDelivery               *smsdelivery.TypeInput
+	ErrorHandlers             *ErrorHandlers
+}
+
+type NormalisedErrorHandlers struct {
+	OnRestartFlowError          func(message string, req *http.Request, res http.ResponseWriter) error
+	OnIncorrectUserInputCode    func(message string, failedCodeInputAttemptCount int, maximumCodeInputAttempts int, req *http.Request, res http.ResponseWriter) error
+	OnExpiredUserInputCodeError func(message string, failedCodeInputAttemptCount int, maximumCodeInputAttempts int, req *http.Request, res http.ResponseWriter) error
 }
 
 type TypeNormalisedInput struct {
@@ -49,6 +64,7 @@ type TypeNormalisedInput struct {
 	Override                  OverrideStruct
 	GetEmailDeliveryConfig    func() emaildelivery.TypeInputWithService
 	GetSmsDeliveryConfig      func() smsdelivery.TypeInputWithService
+	ErrorHandlers             NormalisedErrorHandlers
 }
 
 type OverrideStruct struct {
