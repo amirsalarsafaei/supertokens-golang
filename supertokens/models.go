@@ -52,11 +52,32 @@ type TypeInput struct {
 	OnSuperTokensAPIError func(err error, req *http.Request, res http.ResponseWriter)
 }
 
+type CoreRequestInfo struct {
+	Method      string
+	URL         string
+	RequestBody []byte
+}
+
+type CoreResponseInfo struct {
+	Method       string
+	URL          string
+	StatusCode   int
+	ResponseBody []byte
+	Duration     int64
+	Error        error
+}
+
+type CoreRequestHooks struct {
+	BeforeRequest func(info CoreRequestInfo, userContext UserContext) error
+	AfterRequest  func(info CoreResponseInfo, userContext UserContext)
+}
+
 type ConnectionInfo struct {
 	ConnectionURI        string
 	APIKey               string
 	NetworkInterceptor   func(*http.Request, UserContext) (*http.Request, error)
 	DisableCoreCallCache bool
+	CoreRequestHooks     *CoreRequestHooks
 }
 
 type APIHandled struct {
