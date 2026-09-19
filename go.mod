@@ -10,7 +10,7 @@ require (
 	github.com/golang-jwt/jwt/v5 v5.0.0
 	github.com/google/uuid v1.6.0
 	github.com/joho/godotenv v1.3.0
-	github.com/nyaruka/phonenumbers/v2 v2.0.11
+	github.com/nyaruka/phonenumbers/v2 v2.0.12
 	github.com/stretchr/testify v1.11.1
 	github.com/twilio/twilio-go v0.26.0
 	golang.org/x/crypto v0.2.0
